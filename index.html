@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transportes Jirena · Excesos de velocidad</title>
+<meta name="description" content="Transportes Jirena S.A.C. · Reporte de excesos de velocidad, tramos críticos y conductores.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M3.3 19a10 10 0 1 1 17.4 0"/><path d="M12 14l4.5-4.5"/><circle cx="12" cy="14" r="1.2"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M12 6.5V12l3.5 2"/></symbol>
+    <symbol id="i-truck" viewBox="0 0 24 24"><rect x="1.5" y="4" width="14" height="12" rx="1"/><path d="M15.5 8.5h4l3 3.5v4h-7"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+    <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H16a3.5 3.5 0 0 0 0-7H8a3.5 3.5 0 0 1 0-7h7.5"/></symbol>
+    <symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8.5" ry="3"/><path d="M20.5 12c0 1.7-3.8 3-8.5 3s-8.5-1.3-8.5-3"/><path d="M3.5 5v14c0 1.7 3.8 3 8.5 3s8.5-1.3 8.5-3V5"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6.5-8 12-8 12s-8-5.5-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="2.8"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 14a6 6 0 0 1 3.5 6"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 2l10 5-10 5L2 7z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></symbol>
+  </defs>
+</svg>
+
+<div class="app">
+  <!-- Menú lateral -->
+  <aside class="side" id="side">
+    <div class="brand">
+      <img src="logo-jirena.png" alt="Transportes Jirena" class="brand-logo">
+      <div><p class="brand-n">Transportes Jirena</p><p class="brand-s">S.A.C.</p></div>
+    </div>
+    <nav class="nav" aria-label="Módulos">
+      <p class="nav-h">Monitoreo</p>
+      <a href="#excesos" class="nav-i" data-view="excesos"><svg class="ic"><use href="#i-gauge"/></svg><span>Excesos de velocidad</span></a>
+      <a href="#conduccion" class="nav-i" data-view="conduccion"><svg class="ic"><use href="#i-clock"/></svg><span>Conducción continua</span><em>Pronto</em></a>
+      <a href="#estatus" class="nav-i" data-view="estatus"><svg class="ic"><use href="#i-truck"/></svg><span>Estatus de unidades</span><em>Pronto</em></a>
+      <a href="#odometro" class="nav-i" data-view="odometro"><svg class="ic"><use href="#i-route"/></svg><span>Odómetro</span><em>Pronto</em></a>
+      <p class="nav-h">Administración</p>
+      <a href="#fuentes" class="nav-i" data-view="fuentes"><svg class="ic"><use href="#i-db"/></svg><span>Fuentes de datos</span><b class="nav-count" id="navSrc" hidden></b></a>
+      <a href="#catalogo" class="nav-i" data-view="catalogo"><svg class="ic"><use href="#i-pin"/></svg><span>Catálogo de tramos</span></a>
+    </nav>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+
+  <div class="main">
+    <!-- Barra superior -->
+    <header class="topbar">
+      <button class="icon-btn only-mob" id="btnMenu" aria-label="Abrir menú"><svg class="ic"><use href="#i-menu"/></svg></button>
+      <div class="crumbs"><span id="crumbSec">Monitoreo</span><span class="sep">/</span><b id="crumbPage">Excesos de velocidad</b></div>
+      <div class="top-r">
+        <span class="status" id="dataStatus">Sin datos cargados</span>
+        <label class="btn"><svg class="ic"><use href="#i-upload"/></svg><span>Cargar reportes</span><input type="file" id="file" accept=".xlsx,.xls,.xlsm,.csv" multiple hidden></label>
+        <button class="btn primary" id="btnPlantilla" disabled><svg class="ic"><use href="#i-download"/></svg><span>Exportar Excel</span></button>
+      </div>
+    </header>
+
+    <div class="banner" id="banner" role="alert" hidden></div>
+    <main class="content">
+      <!-- ============ EXCESOS ============ -->
+      <section class="view" data-page="excesos">
+        <div class="page-h">
+          <div>
+            <h1>Excesos de velocidad</h1>
+            <p class="sub" id="periodoTxt">Carga los reportes de GPS para generar el informe.</p>
+          </div>
+        </div>
+
+        <!-- Estado vacío -->
+        <div id="empty" class="empty">
+          <label class="drop" id="drop">
+            <input type="file" id="file2" accept=".xlsx,.xls,.xlsm,.csv" multiple hidden>
+            <svg class="ic big"><use href="#i-file"/></svg>
+            <p class="drop-t">Arrastra los reportes aquí o <u>selecciónalos</u></p>
+            <p class="muted">Reportes de excesos exportados del GPS o la plantilla JIR-FO-OP-21. Formatos .xlsx, .xls o .csv.</p>
+            <p class="muted small">Los archivos se procesan en este equipo y no se envían a ningún servidor.</p>
+          </label>
+        </div>
+
+        <div id="report" hidden>
+          <!-- Filtros -->
+          <div class="filters">
+            <label>Desde<input type="date" id="fDesde"></label>
+            <label>Hasta<input type="date" id="fHasta"></label>
+            <label>Unidad<select id="fPlaca"><option value="">Todas</option></select></label>
+            <label>Conductor<select id="fCond"><option value="">Todos</option></select></label>
+            <label>Falta<select id="fFalta"><option value="">Todas</option><option>LEVE</option><option>MODERADO</option><option>GRAVE</option></select></label>
+            <details class="cfg">
+              <summary>Parámetros</summary>
+              <div class="cfg-pop">
+                <label>Límite por defecto (km/h)<input type="number" id="cLim" value="80" min="10" max="200"></label>
+                <label>Leve hasta (+km/h)<input type="number" id="cLeve" value="5" min="1" max="50"></label>
+                <label>Moderado hasta (+km/h)<input type="number" id="cMod" value="10" min="2" max="80"></label>
+                <label>Radio de tramo (km)<input type="number" id="cEps" value="1.5" step="0.1" min="0.2" max="10"></label>
+                <label>Mínimo por tramo<input type="number" id="cMin" value="8" min="2" max="100"></label>
+              </div>
+            </details>
+          </div>
+
+
+          <!-- Pestañas -->
+          <div class="tabs" role="tablist">
+            <button role="tab" class="tab on" data-tab="resumen">Resumen</button>
+            <button role="tab" class="tab" data-tab="evolucion">Evolución mensual</button>
+            <button role="tab" class="tab" data-tab="mapa">Mapa de tramos</button>
+            <button role="tab" class="tab" data-tab="conductores">Conductores y unidades</button>
+            <button role="tab" class="tab" data-tab="detalle">Detalle de eventos</button>
+          </div>
+
+          <div class="tabp" data-panel="resumen">
+            <div class="grid g-2-1">
+              <div class="panel"><div class="ph"><h3>Eventos por día</h3><span class="muted small">apilado por tipo de falta</span></div><div class="chart"><canvas id="chDia"></canvas></div></div>
+              <div class="panel"><div class="ph"><h3>Distribución por falta</h3></div><div class="sev" id="sevList"></div></div>
+            </div>
+            <div class="grid g-1-1">
+              <div class="panel"><div class="ph"><h3>Eventos por hora del día</h3></div><div class="chart"><canvas id="chHora"></canvas></div></div>
+              <div class="panel"><div class="ph"><h3>Tramos con más eventos</h3><button class="link" data-goto="mapa">Ver en el mapa</button></div><div class="table-wrap"><table id="tTop5" class="tbl"></table></div></div>
+            </div>
+          </div>
+
+          <div class="tabp" data-panel="evolucion" hidden>
+            <div class="panel">
+              <div class="ph evo-top">
+                <div><h3>Comparación entre meses</h3><p class="muted small">Muestra si cada conductor y cada tramo mejoró o empeoró de un mes a otro. Usa los filtros de unidad, conductor y falta, pero no las fechas Desde y Hasta.</p></div>
+                <div class="evo-sel"><label>Mes anterior<select id="mA"></select></label><span class="evo-arrow">→</span><label>Mes actual<select id="mB"></select></label></div>
+              </div>
+              <div class="evo-sum" id="evoSum"></div>
+            </div>
+            <div class="panel" id="evoEmpty" hidden><p class="pad" style="padding:8px 0">Para comparar necesitas datos de <b>al menos dos meses</b>. Carga también el reporte del mes anterior; puedes subir varios archivos a la vez.</p></div>
+            <div id="evoBody">
+              <div class="panel">
+                <div class="ph"><h3>Evolución por conductor</h3>
+                  <div class="map-ctl static" id="evoFilt" role="group" aria-label="Filtrar por estado">
+                    <button class="seg on" data-f="">Todos</button><button class="seg" data-f="up">Empeoraron</button><button class="seg" data-f="down">Mejoraron</button><button class="seg" data-f="new">Nuevos</button>
+                  </div>
+                </div>
+                <div class="table-wrap tall"><table id="tEvoCond" class="tbl"></table></div>
+                <p class="muted small">Haz clic en un conductor para ver en qué tramos cambió y para registrar la fecha de su charla de seguridad.</p>
+              </div>
+              <div class="panel">
+                <div class="ph"><h3>Evolución por tramo</h3></div>
+                <div class="table-wrap tall"><table id="tEvoTramo" class="tbl"></table></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tabp" data-panel="mapa" hidden>
+            <div class="mapbox">
+              <div class="map-wrap">
+                <div id="map"></div>
+                <div class="map-ctl" role="group" aria-label="Capas del mapa">
+                  <button class="seg on" data-layer="pts">Eventos</button>
+                  <button class="seg on" data-layer="tr">Tramos</button>
+                </div>
+                <div class="map-legend" id="mapLegend"></div>
+              </div>
+              <div class="tlist">
+                <div class="tlist-h"><h3>Tramos críticos</h3><span class="muted small" id="tCount"></span></div>
+                <ol id="tList"></ol>
+              </div>
+            </div>
+          </div>
+
+          <div class="tabp" data-panel="conductores" hidden>
+            <div class="grid g-1-1">
+              <div class="panel"><div class="ph"><h3>Conductores con más eventos</h3></div><div class="chart tall"><canvas id="chCond"></canvas></div></div>
+              <div class="panel"><div class="ph"><h3>Unidades con más eventos</h3></div><div class="chart tall"><canvas id="chPlaca"></canvas></div></div>
+            </div>
+            <div class="panel"><div class="ph"><h3>Ranking de conductores</h3></div><div class="table-wrap"><table id="tCond" class="tbl"></table></div></div>
+          </div>
+
+          <div class="tabp" data-panel="detalle" hidden>
+            <div class="panel">
+              <div class="ph"><h3>Eventos registrados</h3><input type="search" id="q" placeholder="Buscar unidad, conductor o tramo"></div>
+              <div class="table-wrap tall"><table id="tDetalle" class="tbl"></table></div>
+              <p class="muted small" id="detNota"></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ MÓDULOS EN DESARROLLO ============ -->
+      <section class="view" data-page="conduccion" hidden>
+        <div class="page-h"><div><h1>Conducción continua</h1><p class="sub">Control de jornadas de manejo sin descanso.</p></div></div>
+        <div class="soon">
+          <span class="tag">Módulo en desarrollo</span>
+          <h2>Alertas de más de 10 horas de manejo continuo</h2>
+          <p>Identificará, por conductor y por día, los periodos de manejo sin pausas suficientes. Mostrará el ranking de conductores con jornadas excedidas y el detalle de cada jornada.</p>
+          <dl><dt>Datos necesarios</dt><dd>Reporte de recorridos o de encendido y apagado por unidad: placa, conductor, hora de inicio y de fin de cada tramo de manejo.</dd></dl>
+        </div>
+      </section>
+      <section class="view" data-page="estatus" hidden>
+        <div class="page-h"><div><h1>Estatus de unidades</h1><p class="sub">Estado de la flota al momento del reporte.</p></div></div>
+        <div class="soon">
+          <span class="tag">Módulo en desarrollo</span>
+          <h2>Unidades en movimiento, detenidas y sin señal</h2>
+          <p>Mostrará cada unidad en el mapa con su última posición, la hora de su última transmisión y alertas para las unidades que dejaron de reportar.</p>
+          <dl><dt>Datos necesarios</dt><dd>Reporte de última posición del GPS: placa, fecha y hora, coordenadas, velocidad y estado del motor.</dd></dl>
+        </div>
+      </section>
+      <section class="view" data-page="odometro" hidden>
+        <div class="page-h"><div><h1>Odómetro</h1><p class="sub">Kilometraje recorrido por la flota.</p></div></div>
+        <div class="soon">
+          <span class="tag">Módulo en desarrollo</span>
+          <h2>Kilómetros por unidad y control de mantenimiento</h2>
+          <p>Calculará los kilómetros recorridos por unidad, por día y por mes, y avisará cuando una unidad se acerque a su siguiente mantenimiento por kilometraje.</p>
+          <dl><dt>Datos necesarios</dt><dd>Reporte de kilometraje u odómetro por unidad, y el plan de mantenimiento de cada unidad (cada cuántos kilómetros).</dd></dl>
+        </div>
+      </section>
+
+      <!-- ============ FUENTES ============ -->
+      <section class="view" data-page="fuentes" hidden>
+        <div class="page-h"><div><h1>Fuentes de datos</h1><p class="sub">Archivos cargados en esta sesión. Puedes activar o quitar cada hoja.</p></div></div>
+        <div class="panel">
+          <div class="table-wrap" id="sources"><p class="muted pad">Todavía no has cargado reportes. Usa el botón “Cargar reportes”.</p></div>
+        </div>
+        <p id="msg" class="msg" role="status"></p>
+      </section>
+
+      <!-- ============ CATÁLOGO ============ -->
+      <section class="view" data-page="catalogo" hidden>
+        <div class="page-h">
+          <div><h1>Catálogo de tramos</h1><p class="sub">Asigna a cada tramo el nombre que usa la empresa. Se aplicará en todos los reportes.</p></div>
+          <div class="row-actions">
+            <button class="btn" id="btnCatExport">Exportar catálogo</button>
+            <label class="btn">Importar catálogo<input type="file" id="catImport" accept=".json" hidden></label>
+          </div>
+        </div>
+        <div class="panel"><div class="table-wrap tall"><table id="tTramos" class="tbl"></table></div></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="lugares-pe.js"></script>
+<script src="etl.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
